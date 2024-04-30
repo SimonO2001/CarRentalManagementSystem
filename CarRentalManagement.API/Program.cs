@@ -1,6 +1,3 @@
-// Navigate back to the API project directory if necessary
-// File: Program.cs in CarRentalManagement.API
-
 using CarRentalManagement.Repository.Data;
 using CarRentalManagement.Repository.Interfaces;
 using CarRentalManagement.Repository.Repositories;
@@ -20,8 +17,13 @@ builder.Services.AddScoped<IRentalContractRepository, RentalContractRepository>(
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IInsuranceRepository, InsuranceRepository>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
-
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin",
+        builder => builder.WithOrigins("http://localhost:4200")
+                          .AllowAnyMethod()
+                          .AllowAnyHeader());
+});
 
 var app = builder.Build();
 
@@ -33,6 +35,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowSpecificOrigin"); // Use the CORS policy
 
 app.UseAuthorization();
 
