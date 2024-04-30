@@ -1,74 +1,105 @@
-﻿// Controllers/VehicleController.cs
-using Microsoft.AspNetCore.Mvc;
-using CarRentalManagement.Repository.Interfaces;
+﻿using CarRentalManagement.API.Dtos;
 using CarRentalManagement.Repository.Models;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using CarRentalManagement.Repository.Data;  // This includes your DbContext if it's in the Data namespace
+using Microsoft.AspNetCore.Mvc;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
-namespace CarRentalManagement.API.Controllers
+[ApiController]
+[Route("[controller]")]
+public class VehiclesController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class VehicleController : ControllerBase
+    private readonly AppDbContext _context;  // Use AppDbContext here, not ApplicationDbContext
+
+    public VehiclesController(AppDbContext context)  // Constructor now expects AppDbContext
     {
-        private readonly IVehicleRepository _vehicleRepository;
-
-        public VehicleController(IVehicleRepository vehicleRepository)
-        {
-            _vehicleRepository = vehicleRepository;
-        }
-
-        // GET: api/Vehicle
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Vehicle>>> GetVehicles()
-        {
-            return Ok(await _vehicleRepository.GetAllVehiclesAsync());
-        }
-
-        // GET: api/Vehicle/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Vehicle>> GetVehicle(int id)
-        {
-            var vehicle = await _vehicleRepository.GetVehicleByIdAsync(id);
-
-            if (vehicle == null)
-            {
-                return NotFound();
-            }
-
-            return vehicle;
-        }
-
-        // POST: api/Vehicle
-        [HttpPost]
-        public async Task<ActionResult<Vehicle>> PostVehicle(Vehicle vehicle)
-        {
-            await _vehicleRepository.AddVehicleAsync(vehicle);
-
-            return CreatedAtAction(nameof(GetVehicle), new { id = vehicle.Id }, vehicle);
-        }
-
-        // PUT: api/Vehicle/5
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutVehicle(int id, Vehicle vehicle)
-        {
-            if (id != vehicle.Id)
-            {
-                return BadRequest();
-            }
-
-            await _vehicleRepository.UpdateVehicleAsync(vehicle);
-
-            return NoContent();
-        }
-
-        // DELETE: api/Vehicle/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteVehicle(int id)
-        {
-            await _vehicleRepository.DeleteVehicleAsync(id);
-
-            return NoContent();
-        }
+        _context = context;
     }
+
+
+    // POST: /Vehicles
+    [HttpPost]
+    public async Task<ActionResult<Vehicle>> CreateVehicle(VehicleCreateDto vehicleDto)
+    {
+        var vehicle = new Vehicle
+        {
+            Type = vehicleDto.Type,
+            Make = vehicleDto.Make,
+            Model = vehicleDto.Model,
+            Year = vehicleDto.Year,
+            VIN = vehicleDto.VIN,
+            RentalRate = vehicleDto.RentalRate,
+            Status = "Available" // Default status when creating a new vehicle
+        };
+
+        _context.Vehicles.Add(vehicle);
+        await _context.SaveChangesAsync();
+        return CreatedAtAction(nameof(GetVehicle), new { id = vehicle.Id }, vehicle);
+    }
+
+    // GET: /Vehicles/{id}
+    [HttpGet("{id}")]
+    public async Task<ActionResult<VehicleDetailDto>> GetVehicle(int id)
+    {
+        var vehicle = await _context.Vehicles.FindAsync(id);
+        if (vehicle == null)
+        {
+            return NotFound();
+        }
+
+        var vehicleDto = new VehicleDetailDto
+        {
+            Id = vehicle.Id,
+            Type = vehicle.Type,
+            Make = vehicle.Make,
+            Model = vehicle.Model,
+            Year = vehicle.Year,
+            VIN = vehicle.VIN,
+            Status = vehicle.Status,
+            CurrentMileage = vehicle.CurrentMileage,
+            RentalRate = vehicle.RentalRate
+        };
+
+        return vehicleDto;
+    }
+
+    // PUT: /Vehicles/{id}
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateVehicle(int id, VehicleUpdateDto vehicleDto)
+    {
+        var vehicle = await _context.Vehicles.FindAsync(id);
+        if (vehicle == null)
+        {
+            return NotFound();
+        }
+
+        vehicle.Type = vehicleDto.Type;
+        vehicle.Make = vehicleDto.Make;
+        vehicle.Model = vehicleDto.Model;
+        vehicle.Year = vehicleDto.Year;
+        vehicle.VIN = vehicleDto.VIN;
+        vehicle.Status = vehicleDto.Status;
+        vehicle.CurrentMileage = vehicleDto.CurrentMileage;
+        vehicle.RentalRate = vehicleDto.RentalRate;
+
+        _context.Entry(vehicle).State = EntityState.Modified;
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteVehicle(int id)
+    {
+        var vehicle = await _context.Vehicles.FindAsync(id);
+        if (vehicle == null)
+        {
+            return NotFound(new { Message = "Vehicle not found." });
+        }
+
+        _context.Vehicles.Remove(vehicle);
+        await _context.SaveChangesAsync();
+        return NoContent();  // Returns a 204 No Content status code to indicate successful deletion
+    }
+
 }
