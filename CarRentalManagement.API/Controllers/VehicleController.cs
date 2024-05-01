@@ -102,4 +102,11 @@ public class VehiclesController : ControllerBase
         return NoContent();  // Returns a 204 No Content status code to indicate successful deletion
     }
 
+    [HttpGet]
+    public async Task<IActionResult> GetAllVehicles()
+    {
+        var vehicles = await _context.Vehicles.ToListAsync();
+        return Ok(vehicles);
+    }
+
 }
