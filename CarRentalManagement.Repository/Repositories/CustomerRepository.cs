@@ -1,10 +1,14 @@
-﻿// Repositories/CustomerRepository.cs
-using CarRentalManagement.Repository.Data;
-using CarRentalManagement.Repository.Interfaces;
-using CarRentalManagement.Repository.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using CarRentalManagement.Repository.Interfaces;
+using CarRentalManagement.Repository.Dtos;
+using CarRentalManagement.Repository.Models;
+using CarRentalManagement.Repository.Data;
 
 namespace CarRentalManagement.Repository.Repositories
 {
@@ -17,26 +21,55 @@ namespace CarRentalManagement.Repository.Repositories
             _context = context;
         }
 
-        public async Task<IEnumerable<Customer>> GetAllCustomersAsync()
+        public async Task<IEnumerable<CustomerDto>> GetAllCustomersAsync()
         {
-            return await _context.Customers.ToListAsync();
+            return await _context.Customers
+                                 .Select(c => new CustomerDto 
+                                 {
+                                     Id = c.Id, 
+                                     Name = c.Name, 
+                                     Email = c.Email
+                                 })
+                                 .ToListAsync();
         }
 
-        public async Task<Customer> GetCustomerByIdAsync(int id)
+        public async Task<CustomerDto> GetCustomerByIdAsync(int id)
         {
-            return await _context.Customers.FindAsync(id);
+            var customer = await _context.Customers.FindAsync(id);
+            if (customer == null) return null;
+            return new CustomerDto 
+            {
+                Id = customer.Id, 
+                Name = customer.Name, 
+                Email = customer.Email
+            };
         }
 
-        public async Task AddCustomerAsync(Customer customer)
+        public async Task AddCustomerAsync(CustomerDto customerDto, string password)
         {
+            var customer = new Customer
+            {
+                Name = customerDto.Name,
+                Email = customerDto.Email,
+                PasswordHash = HashPassword(password)  // Hash and store the password
+            };
             _context.Customers.Add(customer);
             await _context.SaveChangesAsync();
         }
 
-        public async Task UpdateCustomerAsync(Customer customer)
+        public async Task UpdateCustomerAsync(int customerId, CustomerDto customerDto, string newPassword = null)
         {
-            _context.Entry(customer).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            var customer = await _context.Customers.FindAsync(customerId);
+            if (customer != null)
+            {
+                customer.Name = customerDto.Name;
+                customer.Email = customerDto.Email;
+                if (!string.IsNullOrEmpty(newPassword))
+                {
+                    customer.PasswordHash = HashPassword(newPassword);  // Update with new hashed password
+                }
+                await _context.SaveChangesAsync();
+            }
         }
 
         public async Task DeleteCustomerAsync(int id)
@@ -46,6 +79,15 @@ namespace CarRentalManagement.Repository.Repositories
             {
                 _context.Customers.Remove(customer);
                 await _context.SaveChangesAsync();
+            }
+        }
+
+        private static string HashPassword(string password)
+        {
+            using (var sha256 = SHA256.Create())
+            {
+                var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+                return BitConverter.ToString(hashedBytes).Replace("-", "").ToLowerInvariant();
             }
         }
     }

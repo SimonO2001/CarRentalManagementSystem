@@ -1,16 +1,11 @@
-﻿// IRepository/ICustomerRepository.cs
-using CarRentalManagement.Repository.Models;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿// ICustomerRepository.cs
+using CarRentalManagement.Repository.Dtos;
 
-namespace CarRentalManagement.Repository.Interfaces
+public interface ICustomerRepository
 {
-    public interface ICustomerRepository
-    {
-        Task<IEnumerable<Customer>> GetAllCustomersAsync();
-        Task<Customer> GetCustomerByIdAsync(int id);
-        Task AddCustomerAsync(Customer customer);
-        Task UpdateCustomerAsync(Customer customer);
-        Task DeleteCustomerAsync(int id);
-    }
+    Task<IEnumerable<CustomerDto>> GetAllCustomersAsync();
+    Task<CustomerDto> GetCustomerByIdAsync(int id);
+    Task AddCustomerAsync(CustomerDto customerDto, string password);
+    Task UpdateCustomerAsync(int customerId, CustomerDto customerDto, string newPassword);
+    Task DeleteCustomerAsync(int id);
 }

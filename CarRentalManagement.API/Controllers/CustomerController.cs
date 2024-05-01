@@ -1,9 +1,9 @@
-﻿// Controllers/CustomerController.cs
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using CarRentalManagement.Repository.Interfaces;
-using CarRentalManagement.Repository.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using CarRentalManagement.Repository.Dtos;
+
 
 namespace CarRentalManagement.API.Controllers
 {
@@ -11,60 +11,53 @@ namespace CarRentalManagement.API.Controllers
     [ApiController]
     public class CustomerController : ControllerBase
     {
-        private readonly ICustomerRepository _customerRepository;
+        private readonly ICustomerRepository _repository;
 
-        public CustomerController(ICustomerRepository customerRepository)
+        public CustomerController(ICustomerRepository repository)
         {
-            _customerRepository = customerRepository;
+            _repository = repository;
         }
 
-        // GET: api/Customer
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Customer>>> GetCustomers()
+        public async Task<ActionResult<IEnumerable<CustomerDto>>> GetCustomers()
         {
-            return Ok(await _customerRepository.GetAllCustomersAsync());
+            var customers = await _repository.GetAllCustomersAsync();
+            return Ok(customers);
         }
 
-        // GET: api/Customer/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Customer>> GetCustomer(int id)
+        public async Task<ActionResult<CustomerDto>> GetCustomer(int id)
         {
-            var customer = await _customerRepository.GetCustomerByIdAsync(id);
-
+            var customer = await _repository.GetCustomerByIdAsync(id);
             if (customer == null)
             {
                 return NotFound();
             }
-
-            return customer;
+            return Ok(customer);
         }
 
-        // POST: api/Customer
         [HttpPost]
-        public async Task<ActionResult<Customer>> PostCustomer(Customer customer)
+        public async Task<ActionResult<CustomerDto>> PostCustomer([FromBody] CustomerDto customerDto, [FromForm] string password)
         {
-            await _customerRepository.AddCustomerAsync(customer);
-            return CreatedAtAction("GetCustomer", new { id = customer.Id }, customer);
+            await _repository.AddCustomerAsync(customerDto, password);
+            return CreatedAtAction(nameof(GetCustomer), new { id = customerDto.Id }, customerDto);
         }
 
-        // PUT: api/Customer/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutCustomer(int id, Customer customer)
+        public async Task<IActionResult> PutCustomer(int id, [FromBody] CustomerDto customerDto, [FromForm] string newPassword)
         {
-            if (id != customer.Id)
+            if (id != customerDto.Id)
             {
                 return BadRequest();
             }
-
-            await _customerRepository.UpdateCustomerAsync(customer);
+            await _repository.UpdateCustomerAsync(id, customerDto, newPassword);
             return NoContent();
         }
 
-        // DELETE: api/Customer/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCustomer(int id)
         {
-            await _customerRepository.DeleteCustomerAsync(id);
+            await _repository.DeleteCustomerAsync(id);
             return NoContent();
         }
     }
